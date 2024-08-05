@@ -1,5 +1,6 @@
 <?php
-
+// putting it under the App\Controller namespace
+namespace App\Controller;
 use Core\Controllers\Controller;
 
 class PagesController extends Controller 

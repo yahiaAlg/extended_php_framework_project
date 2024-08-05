@@ -22,7 +22,9 @@ try {
     $method = $_SERVER['REQUEST_METHOD'];
     $uri = $_SERVER['REQUEST_URI'];
 
-    $router->dispatch($method, $uri);
+    // echoing the current uri with it's method
+    echo "<br/>Current URI: $uri with method: $method<br/>";
+    $router->dispatch($uri, $method);
 } catch (Exception $e) {
     // log the error
     error_log($e->getMessage());

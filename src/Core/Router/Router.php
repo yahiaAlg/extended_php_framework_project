@@ -63,9 +63,24 @@ class Router
 
     public function dispatch($uri, $method)
     {
+        // removing the query string and extracting only the url
+        // $uri = explode('?', $uri)[0];
         $uri = $this->removeQueryString($uri);
-
-        if (!isset($this->routes[$method])) {
+        //echoing the current uri
+        $routeRegistered = isset($this->routes[$method]);
+        echo "<br/>Current uri dispatched: $uri<br/> and the current method used is $method<br/>";
+        echo "<pre>";
+        print_r($this->routes);
+        echo "</pre>";
+        if ($routeRegistered) {
+        echo "<pre>";
+        print_r($this->routes[$method]);
+        echo "</pre>";
+        }
+        if (
+            !isset($this->routes[$method][$uri])
+        ) {
+            // echoing the routes array
             $this->notFound();
         }
 
@@ -106,7 +121,9 @@ class Router
 
         if (is_string($handler)) {
             list($controller, $method) = explode('@', $handler);
+            // echoing the name of the currently launched controller and it's associated method
             $controller = 'App\\Controllers\\' . $controller;
+            echo "<br/>Controller: $controller, Method: $method <br/>";
             $controller = new $controller();
             return call_user_func_array([$controller, $method], $params);
         }
