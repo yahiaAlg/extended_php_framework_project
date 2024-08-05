@@ -3,190 +3,206 @@
 namespace Database;
 
 use PDO;
-use PDOStatement;
+use PDOException;
 
 class QueryBuilder
 {
-    private $pdo;
-    private $table;
-    private $columns = ['*'];
-    private $where = [];
-    private $orderBy = [];
-    private $limit;
-    private $offset;
-
+    protected $pdo;
+    protected $table;
+    protected $where = [];
+    protected $params = [];
+    protected $orderBy = '';
+    protected $limit = '';
+    protected $offset = '';
+    protected $joins = [];
+    private $whereConditions = [];
+    private $whereParams = [];
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
     }
 
-    public function from(
-        string $table,
-    ): self
+    public function from($table)
     {
-        $this->table[] = $table;
+        $this->reset();
+        $this->table = $table;
         return $this;
     }
 
-    public function select(array | string $columns): self
+    public function where($column, $operator, $value = null)
     {
-        if (is_string($columns) && $columns == "*") {
-            $this->columns = ['*'];
+        $this->addWhereCondition('AND', $column, $operator, $value);
+        return $this;
+    }
+
+    public function orWhere($column, $operator, $value = null)
+    {
+        $this->addWhereCondition('OR', $column, $operator, $value);
+        return $this;
+    }
+
+    private function addWhereCondition($type, $column, $operator, $value)
+    {
+        if ($value === null) {
+            $value = $operator;
+            $operator = '=';
+        }
+        $this->whereConditions[] = [$type, $column, $operator, '?'];
+        $this->whereParams[] = $value;
+    }
+
+    private function buildWhereClause()
+    {
+        if (empty($this->whereConditions)) {
+            return '';
+        }
+
+        $whereParts = [];
+        foreach ($this->whereConditions as $index => $condition) {
+            list($type, $column, $operator, $placeholder) = $condition;
+            if ($index === 0) {
+                $whereParts[] = "$column $operator $placeholder";
             } else {
-                $this->columns = $columns;
+                $whereParts[] = "$type $column $operator $placeholder";
             }
+        }
+
+        $whereClause = 'WHERE ' . implode(' ', $whereParts);
+        // echo "<br/>Debug: Where Clause: " . $whereClause . "<br/>";
+        // echo "<br/>Debug: Where Conditions: " . print_r($this->whereConditions, true) . "<br/>";
+        return $whereClause;
+    }
+
+    public function all()
+    {
+        if (!empty($this->joins)) {
+            $sql = "SELECT {$this->table}.* FROM {$this->table} ";
+            $sql .= implode(' ', $this->joins) . ' ';
+        } else {
+            $sql = "SELECT * FROM {$this->table} ";
+        }
+        
+        $sql .= $this->buildWhereClause();
+        
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($this->whereParams);
+            return $stmt->fetchAll(PDO::FETCH_OBJ);
+        } catch (PDOException $e) {
+            echo "<br/>Error: " . $e->getMessage() . "<br/>";
+            echo "<br/>SQL: " . $sql . "<br/>";
+            echo "<br/>Params: " . print_r($this->whereParams, true) . "<br/>";
+            // Re-throw the exception if you want to halt execution
+            // throw $e;
+        }
+    }
+    
+    public function join($table, $condition)
+    {
+        $this->joins[] = "INNER JOIN $table ON $condition";
         return $this;
     }
 
-    public function where(string $column, string $operator, $value): self
+    public function orderBy($column, $direction = 'ASC')
     {
-        $this->where[] = [$column, $operator, $value];
+        $this->orderBy = "ORDER BY $column $direction";
         return $this;
     }
 
-
-    public function orderBy(string $column, string $direction = 'ASC'): self
+    public function limit($limit)
     {
-        $this->orderBy[] = [$column, $direction];
+        $this->limit = "LIMIT $limit";
         return $this;
     }
 
-    public function limit(int $limit): self
+    public function offset($offset)
     {
-        $this->limit = $limit;
+        $this->offset = "OFFSET $offset";
         return $this;
     }
 
-    public function offset(int $offset): self
+    public function get()
     {
-        $this->offset = $offset;
-        return $this;
-    }
-
-    public function get(): array
-    {
-        $query = $this->buildQuery();
-        $stmt = $this->pdo->prepare($query);
-        $this->bindValues($stmt);
-        $stmt->execute();
-        return $stmt->fetch();
+        $sql = $this->buildQuery();
+        $stmt = $this->pdo->prepare($sql);
+        // echo "<br/>Debug: SQL Query: " . $sql . "<br/>";
+        // echo "<br/>Debug: Params: " . print_r($this->whereParams, true) . "<br/>";
+        $stmt->execute($this->whereParams);
+        return $stmt->fetch(PDO::FETCH_OBJ);
     }
 
 
-    // fetching all the querySet
-    public function all(): array {
-        $query = $this->buildQuery();
-        $stmt = $this->pdo->prepare($query);
-        $this->bindValues($stmt);
-        $stmt->execute();
-        return $stmt->fetchAll();
-    }
-
-    public function first()
-    {
-        $this->select(
-            '*'
-        )
-        ->from($this->table)
-        ->where('id', '>', 0)
-        ->orderBy('id')
-        ->limit(1);
-        return $this->get();
-    }
-
-    // fetching the last record
-    public function last() {
-        $this->select(
-            '*'
-        )
-        ->from($this->table)
-        ->where('id', '>', 0)
-        ->orderBy('id', 'DESC')
-        ->limit(1);
-        return $this->get();
-    }
-
-    private function buildQuery(): string
-    {
-        $query = "SELECT " . implode(', ', $this->columns) . " FROM " . $this->table;
-
-        if (!empty($this->where)) {
-            $query .= " WHERE " . $this->buildWhereClause();
-        }
-
-        if (!empty($this->orderBy)) {
-            $query .= " ORDER BY " . $this->buildOrderByClause();
-        }
-
-        if ($this->limit !== null) {
-            $query .= " LIMIT " . $this->limit;
-        }
-
-        if ($this->offset !== null) {
-            $query .= " OFFSET " . $this->offset;
-        }
-
-        return $query;
-    }
-
-    private function buildWhereClause(): string
-    {
-        return implode(' AND ', array_map(function($condition) {
-            return $condition[0] . ' ' . $condition[1] . ' ?';
-        }, $this->where));
-    }
-
-    private function buildOrderByClause(): string
-    {
-        return implode(', ', array_map(function($order) {
-            return $order[0] . ' ' . $order[1];
-        }, $this->orderBy));
-    }
-
-    private function bindValues(PDOStatement $stmt): void
-    {
-        $index = 1;
-        foreach ($this->where as $condition) {
-            $stmt->bindValue($index++, $condition[2]);
-        }
-    }
-
-    public function insert(array $data): int
+    public function insert($data)
     {
         $columns = implode(', ', array_keys($data));
-        $values = implode(', ', array_fill(0, count($data), '?'));
+        $placeholders = implode(', ', array_fill(0, count($data), '?'));
         
-        $query = "INSERT INTO {$this->table} ($columns) VALUES ($values)";
-        $stmt = $this->pdo->prepare($query);
+        $sql = "INSERT INTO {$this->table} ($columns) VALUES ($placeholders)";
+        $stmt = $this->pdo->prepare($sql);
         $stmt->execute(array_values($data));
         
         return $this->pdo->lastInsertId();
     }
 
-    // delete a row
-    public function delete(int $id): bool
+    public function update($data)
     {
-        $query = "DELETE FROM {$this->table} WHERE id = ?";
-        $stmt = $this->pdo->prepare($query);
-        return $stmt->execute([$id]);
+        $set = [];
+        $updateParams = [];
+        foreach ($data as $column => $value) {
+            $set[] = "$column = ?";
+            // Convert boolean false to 0 and true to 1
+            if (is_bool($value)) {
+                $updateParams[] = $value ? 1 : 0;
+            } else {
+                $updateParams[] = $value;
+            }
+        }
+        $set = implode(', ', $set);
+        
+        $sql = "UPDATE {$this->table} SET $set " . $this->buildWhereClause();
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(array_merge($updateParams, $this->whereParams));
+        
+        return $stmt->rowCount();
     }
 
-    // updating a table based on a codition
-    public function update(array $data): bool {
-        $columns = implode(', ', array_map(function($column) {
-            return $column . ' = ?';
-            }, array_keys($data)));
-            $query = "UPDATE {$this->table} SET $columns WHERE " . $this->
-            buildWhereClause();
-            $stmt = $this->pdo->prepare($query);
-            $this->bindValues($stmt);
-            return $stmt->execute();
-    }
-
-
-    public function truncate(): void
+    public function delete($id = null)
     {
-        $query = "TRUNCATE TABLE {$this->table}";
-        $this->pdo->exec($query);
+        if ($id !== null) {
+            $this->where('id', '=', $id);
+        }
+        
+        $sql = "DELETE FROM {$this->table} " . $this->buildWhereClause();
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($this->whereParams);
+        
+        return $stmt->rowCount();
     }
+
+    public function reset()
+    {
+        $this->table = '';
+        $this->whereConditions = [];
+        $this->whereParams = [];
+        $this->orderBy = '';
+        $this->limit = '';
+        $this->offset = '';
+        $this->joins = [];
+        return $this;
+    }
+
+    protected function buildQuery()
+    {
+        if (!empty($this->joins)) {
+            $query = "SELECT {$this->table}.* FROM {$this->table} ";
+            $query .= implode(' ', $this->joins) . ' ';
+        } else {
+            $query = "SELECT * FROM {$this->table} ";
+        }
+        
+        $query .= $this->buildWhereClause();
+        $query .= " {$this->orderBy} {$this->limit} {$this->offset}";
+        return $query;
+    }
+
 }
