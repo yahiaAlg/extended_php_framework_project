@@ -10,10 +10,10 @@ class Router
     protected $namedRoutes = [];
     protected $basePath = '';
 
-    public function __construct()
+    public function __construct($basePath='')
     {
         // set the base path as the APPROOT
-        $this->basePath = APPROOT;
+        $this->basePath = $basePath;
         // message for showcasing the launching of the router
         echo "<br/>Router is launched.<br/>";
     }
@@ -22,19 +22,27 @@ class Router
         $this->basePath = $basePath;
     }
 
-    public function add($methods, $uri, $handler, $middleware = [], $name = null)
+
+    public function add($method, $uri, $handler, $middleware = [])
     {
-        $uri = $this->basePath . '/' . trim($uri, '/');
-        $uri = $uri === $this->basePath ? $uri : rtrim($uri, '/');
-
-        foreach ((array)$methods as $method) {
-            $this->routes[$method][$uri] = ['handler' => $handler, 'middleware' => $middleware];
-        }
-
-        if ($name) {
-            $this->namedRoutes[$name] = $uri;
-        }
+        $this->routes[$method][$uri] = [
+            'handler' => $handler,
+            'middleware' => $middleware
+        ];
     }
+    // public function add($methods, $uri, $handler, $middleware = [], $name = null)
+    // {
+    //     $uri = $this->basePath . '/' . trim($uri, '/');
+    //     $uri = $uri === $this->basePath ? $uri : rtrim($uri, '/');
+
+    //     foreach ((array)$methods as $method) {
+    //         $this->routes[$method][$uri] = ['handler' => $handler, 'middleware' => $middleware];
+    //     }
+
+    //     if ($name) {
+    //         $this->namedRoutes[$name] = $uri;
+    //     }
+    // }
 
     public function get($uri, $handler, $middleware = [], $name = null)
     {
@@ -56,54 +64,62 @@ class Router
         $this->add('DELETE', $uri, $handler, $middleware, $name);
     }
 
-    public function any($uri, $handler, $middleware = [], $name = null)
-    {
-        $this->add(['GET', 'POST', 'PUT', 'DELETE'], $uri, $handler, $middleware, $name);
-    }
 
     public function dispatch($uri, $method)
     {
-        // removing the query string and extracting only the url
-        // $uri = explode('?', $uri)[0];
-        $uri = $this->removeQueryString($uri);
-        //echoing the current uri
-        $routeRegistered = isset($this->routes[$method]);
-        echo "<br/>Current uri dispatched: $uri<br/> and the current method used is $method<br/>";
-        echo "<pre>";
-        print_r($this->routes);
-        echo "</pre>";
-        if ($routeRegistered) {
-        echo "<pre>";
-        print_r($this->routes[$method]);
-        echo "</pre>";
-        }
-        if (
-            !isset($this->routes[$method][$uri])
-        ) {
-            // echoing the routes array
-            $this->notFound();
-        }
+        // Step 1: Get the requested URI and HTTP method
+        echo "Dispatching: $method $uri\n";
 
-        foreach ($this->routes[$method] as $route => $info) {
-            $pattern = $this->convertRouteToRegex($route);
-            if (preg_match($pattern, $uri, $params)) {
-                array_shift($params);
-                $this->runMiddleware($info['middleware']);
-                return $this->runHandler($info['handler'], $params);
+        // Step 2: Clean up the URI
+        $uri = $this->cleanUri($uri);
+        echo "Cleaned URI: $uri\n";
+
+        // Step 3: Look through our routes
+        if (isset($this->routes[$method])) {
+            foreach ($this->routes[$method] as $route => $info) {
+                if ($this->matchRoute($route, $uri, $params)) {
+                    // Step 4: If we find a matching route
+                    echo "Route matched: $route<br/>";
+
+                    // Run any middleware
+                    $this->runMiddleware($info['middleware']);
+
+                    // Execute the associated handler
+                    return $this->runHandler($info['handler'], $params);
+                }
             }
         }
 
+        // Step 5: If no match is found, return a 404 error
         $this->notFound();
+    }
+
+
+    protected function cleanUri($uri)
+    {
+        // Remove base path from URI
+        $uri = substr($uri, strlen($this->basePath));
+        
+        // Remove query string
+        $uri = preg_replace('/\?.*/', '', $uri);
+        
+        // Ensure URI starts with '/' and remove trailing '/'
+        return '/' . trim($uri, '/');
+    }
+
+    protected function matchRoute($route, $uri, &$params)
+    {
+        $pattern = $this->convertRouteToRegex($route);
+        if (preg_match($pattern, $uri, $matches)) {
+            $params = array_slice($matches, 1);
+            return true;
+        }
+        return false;
     }
 
     protected function convertRouteToRegex($route)
     {
         return '#^' . preg_replace('/\{([a-zA-Z0-9_]+)\}/', '([^/]+)', $route) . '$#';
-    }
-
-    protected function removeQueryString($uri)
-    {
-        return preg_replace('/\?.*/', '', $uri);
     }
 
     protected function runMiddleware($middleware)

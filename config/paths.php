@@ -15,13 +15,13 @@ define('URLROOT', $protocol . "://" . $host);
 define('PUBLIC_DIR', BASEROOT . '/public');
 
 // Define views directory
-define('VIEWS_DIR', APPROOT . '/views');
+define('VIEWS_DIR', APPROOT . '/Views');
 
 // Define controllers directory
-define('CONTROLLERS_DIR', APPROOT . '/controllers');
+define('CONTROLLERS_DIR', APPROOT . '/Controllers');
 
 // Define models directory
-define('MODELS_DIR', APPROOT . '/models');
+define('MODELS_DIR', APPROOT . '/Models');
 
 
 // echoing the different Constants

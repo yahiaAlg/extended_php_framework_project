@@ -9,13 +9,15 @@ class View
     public function __construct($view)
     {
         $this->view = $view;
+        echo "<br/>launching the {$this->view} inside View Core class<br/>";
     }
 
     public function render($data = [])
     {
         extract($data);
         ob_start();
-        require_once VIEWS_DIR."/{$this->view}.view.php";
+        echo "<br/>rendering the {$this->view} inside View Core class<br/>";
+        require VIEWS_DIR."/{$this->view}.view.php";
         return ob_get_clean();
     }
 }

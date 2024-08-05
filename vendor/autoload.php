@@ -2,31 +2,28 @@
 
 spl_autoload_register(function ($class) {
     // Project-specific namespace prefix
-    $prefix = 'Core\\';
+    echo "<br/>the currently called class: $class<br/>";
+    $prefixes = ['Core\\', 'App\\'];
 
     // Base directory for the namespace prefix
-    $base_dir = LIBSROOT;
-    echo '<br/>Base directory for the namespace prefix: '.$base_dir.'<br/>';
+    $currentPrefix = explode("\\", $class)[0];
+    $base_dir = $currentPrefix == 'App'? BASEROOT : LIBSROOT;
+    echo '<br/>Base directory for the namespace prefix: '.$currentPrefix.' is: '.$base_dir.'<br/>';
 
     // Does the class use the namespace prefix?
-    $len = strlen($prefix);
-    if (strncmp($prefix, $class, $len) !== 0) {
-        echo "No, move to the next registered autoloader <br/>";
-        return;
-    }
+    
+    if (strpos($class, $currentPrefix) === 0) {
+        // Get the relative class name
+        $relative_class = substr($class, strlen($currentPrefix));
+        echo '<br/>Relative class name: '.$relative_class.'<br/>';
+        // Include the file
 
-    // Get the relative class name
-    $relative_class = substr($class, $len);
-
-    // Replace the namespace prefix with the base directory, replace namespace
-    // separators with directory separators in the relative class name, append
-    // with .php
-    $file = $base_dir .'/Core/'. str_replace('\\', '/', $relative_class) . '.php';
-    echo '<br/>File: '.$file.'<br/>';
-
-    // If the file exists, require it
-    if (file_exists($file)) {
-        require $file;
+        $file = $base_dir ."/".rtrim($currentPrefix,'\\'). str_replace('\\', '/', $relative_class) . '.php';
+        echo '<br/>File to include: '.$file.'<br/>';
+        if (file_exists($file)) {
+            require $file;
+            return;
+        }
     }
 });
 

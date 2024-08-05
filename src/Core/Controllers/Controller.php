@@ -9,8 +9,9 @@ abstract class Controller
 {
     protected function render($view, $data = [])
     {
+        echo "rendering $view";
         $view = new View($view);
-        return $view->render($data);
+        echo $view->render($data);  // Echo the result
     }
 
     protected function sendEmail($to, $subject, $message, $from = null)

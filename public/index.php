@@ -10,14 +10,8 @@ use Core\Router\Router;
 try {
     // create router instance
     $router = new Router();
-    // run router
-    $router->get(
-        '/',
-        "PagesController@index",
-        ['auth' => false],
-        'home'
-    );
-
+    // run router on registered routes
+    require_once APPROOT. '/Routes.php';
     // Dispatch the request
     $method = $_SERVER['REQUEST_METHOD'];
     $uri = $_SERVER['REQUEST_URI'];
