@@ -1,7 +1,7 @@
 <?php
 
 // Define upload directories
-define('UPLOAD_DIR', APPROOT . '/public/uploads');
+define('UPLOAD_DIR', PUBLIC_DIR . '/uploads');
 // make the directory if it doesn't exist
 if (!is_dir(UPLOAD_DIR)) {
     mkdir(UPLOAD_DIR, 0777, true);
