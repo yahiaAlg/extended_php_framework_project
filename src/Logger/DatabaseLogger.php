@@ -3,43 +3,67 @@
 namespace Logger;
 
 use Database\DatabaseConnection;
-use Database\QueryBuilder;
 
 class DatabaseLogger implements Logger
 {
-    private $queryBuilder;
-    private $tableName;
+    private $dbConnection;
+    private $logTable = 'logs';
 
-    public function __construct(DatabaseConnection $dbConnection, string $tableName = 'logs')
+    public function __construct(DatabaseConnection $dbConnection)
     {
-        $this->queryBuilder = new QueryBuilder($dbConnection->getConnection());
-        $this->tableName = $tableName;
+        $this->dbConnection = $dbConnection;
+        $this->ensureLogTableExists();
     }
 
-    public function log(string $message, string $level = 'INFO', array $context = []): void
+    private function ensureLogTableExists()
     {
-        $logEntry = [
-            'message' => $message,
-            'level' => $level,
-            'context' => json_encode($context),
-            'created_at' => date('Y-m-d H:i:s')
-        ];
+        $schema = "
+            CREATE TABLE IF NOT EXISTS {$this->logTable} (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                message TEXT NOT NULL,
+                level VARCHAR(20) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ";
 
-        $this->queryBuilder->table($this->tableName)->insert($logEntry);
+        $this->dbConnection->createTable($this->logTable, $schema);
     }
 
-    public function getLogs(int $limit = 10, int $offset = 0): array
+    public function log($message, $level = 'info')
     {
-        return $this->queryBuilder
-            ->table($this->tableName)
-            ->orderBy('created_at', 'DESC')
-            ->limit($limit)
-            ->offset($offset)
-            ->get();
+        $pdo = $this->dbConnection->getConnection();
+        $query = "INSERT INTO {$this->logTable} (message, level) VALUES (:message, :level)";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute(['message' => $message, 'level' => $level]);
     }
 
-    public function clearLogs(): void
+    public function getLog($limit = null, $offset = null)
     {
-        $this->queryBuilder->table($this->tableName)->truncate();
+        $pdo = $this->dbConnection->getConnection();
+        $query = "SELECT * FROM {$this->logTable} ORDER BY created_at DESC";
+        
+        if ($limit !== null) {
+            $query .= " LIMIT :limit";
+            if ($offset !== null) {
+                $query .= " OFFSET :offset";
+            }
+        }
+
+        $stmt = $pdo->prepare($query);
+
+        if ($limit !== null) {
+            $stmt->bindValue(':limit', (int)$limit, \PDO::PARAM_INT);
+            if ($offset !== null) {
+                $stmt->bindValue(':offset', (int)$offset, \PDO::PARAM_INT);
+            }
+        }
+
+        $stmt->execute();
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    public function clearLog()
+    {
+        $this->dbConnection->clearTable($this->logTable);
     }
 }

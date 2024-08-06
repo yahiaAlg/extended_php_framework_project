@@ -5,28 +5,27 @@ namespace Logger;
 interface Logger
 {
     /**
-     * Log a message with an optional level and context.
+     * Log a message with a specified log level.
      *
-     * @param string $message The log message
-     * @param string $level The log level (e.g., INFO, WARNING, ERROR)
-     * @param array $context Additional context data for the log entry
+     * @param mixed $message The message to log
+     * @param string $level The log level (e.g., 'info', 'warning', 'error', 'debug')
      * @return void
      */
-    public function log(string $message, string $level = 'INFO', array $context = []): void;
+    public function log($message, $level = 'info');
 
     /**
-     * Retrieve logs with optional limit and offset for pagination.
+     * Retrieve log entries.
      *
-     * @param int $limit Maximum number of log entries to retrieve
-     * @param int $offset Number of log entries to skip
+     * @param int|null $limit The maximum number of log entries to retrieve (optional)
+     * @param int|null $offset The number of log entries to skip (optional)
      * @return array An array of log entries
      */
-    public function getLogs(int $limit = 100, int $offset = 0): array;
+    public function getLog($limit = null, $offset = null);
 
     /**
-     * Clear all logs.
+     * Clear all log entries.
      *
      * @return void
      */
-    public function clearLogs(): void;
+    public function clearLog();
 }

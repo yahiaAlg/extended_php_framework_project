@@ -41,9 +41,21 @@ class Form
         return $valid;
     }
 
-    public function setData(array $data)
+    public function setData($data)
     {
-        $this->data = $data;
+        foreach ($this->fields as $name => $field) {
+            if ($field instanceof FileField) {
+                if (isset($_FILES[$name])) {
+                    $field->setValue($_FILES[$name]);
+                }
+            } elseif (isset($data[$name])) {
+                $field->setValue($data[$name]);
+            }
+        }
+    }
+    public function getField($fieldName)
+    {
+        return $this->fields[$fieldName] ?? null;
     }
 
     public function getData()
@@ -62,9 +74,14 @@ class Form
 
     public function render()
     {
-        $output = '<form method="post">';
-        foreach ($this->fields as $field) {
+        $output = '<form method="post" enctype="multipart/form-data">';
+        foreach ($this->fields as $name => $field) {
             $output .= $field->render();
+            if (isset($this->errors[$name])) {
+                foreach ($this->errors[$name] as $error) {
+                    $output .= '<p class="error">' . htmlspecialchars($error) . '</p>';
+                }
+            }
         }
         $output .= '<input type="submit" value="Submit">';
         $output .= '</form>';

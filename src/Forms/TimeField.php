@@ -22,7 +22,7 @@ class TimeField extends Field
     public function render()
     {
         $required = $this->required ? 'required' : '';
-        $value = htmlspecialchars($this->value);
+        $value = htmlspecialchars($this->value?? "");
         return "<label for='{$this->name}'>{$this->label}</label>
                 <input type='time' name='{$this->name}' id='{$this->name}' value='{$value}' {$required}>";
     }

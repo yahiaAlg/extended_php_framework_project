@@ -17,7 +17,7 @@ class TextAreaField extends Field
     public function render()
     {
         $required = $this->required ? 'required' : '';
-        $value = htmlspecialchars($this->value);
+        $value = htmlspecialchars($this->value?? "");
         return "<label for='{$this->name}'>{$this->label}</label>
                 <textarea name='{$this->name}' id='{$this->name}' rows='{$this->rows}' cols='{$this->cols}' {$required}>{$value}</textarea>";
     }

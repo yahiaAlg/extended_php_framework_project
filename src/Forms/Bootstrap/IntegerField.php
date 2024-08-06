@@ -19,7 +19,7 @@ class IntegerField extends Field
         $attrs = $this->getCommonAttributes();
         $min = $this->min !== null ? "min='{$this->min}'" : '';
         $max = $this->max !== null ? "max='{$this->max}'" : '';
-        $value = htmlspecialchars($this->value);
+        $value = htmlspecialchars($this->value?? "");
         return "<label for='{$this->name}' class='form-label'>{$this->label}</label>
                 <input type='number' name='{$this->name}' id='{$this->name}' value='{$value}' {$attrs} {$min} {$max} step='1'>
                 {$this->renderErrors()}";

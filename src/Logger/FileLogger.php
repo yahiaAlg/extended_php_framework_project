@@ -2,89 +2,79 @@
 
 namespace Logger;
 
-use Exception;
-
 class FileLogger implements Logger
 {
     private $logFile;
-    private $maxFileSize;
-    private $backupCount;
+    private $logLevels = ['info', 'warning', 'error', 'debug'];
 
-    public function __construct(string $logFile, int $maxFileSize = 5242880, int $backupCount = 5)
+    public function __construct(string $logFile)
     {
         $this->logFile = $logFile;
-        $this->maxFileSize = $maxFileSize; // Default to 5MB
-        $this->backupCount = $backupCount;
+        $this->ensureLogFileExists();
     }
 
-    public function log(string $message, string $level = 'INFO', array $context = []): void
+    public function log($message, $level = 'info')
     {
-        $logEntry = $this->formatLogEntry($message, $level, $context);
+        $this->validateLogLevel($level);
 
-        $this->writeLog($logEntry);
-        $this->rotateLogIfNeeded();
+        $logEntry = $this->formatLogEntry($message, $level);
+        $this->writeToFile($logEntry);
     }
 
-    private function formatLogEntry(string $message, string $level, array $context): string
+    public function getLog($limit = null, $offset = null)
     {
-        $timestamp = date('Y-m-d H:i:s');
-        $contextString = !empty($context) ? json_encode($context) : '';
-        return "[$timestamp] [$level] $message $contextString" . PHP_EOL;
+        $contents = file($this->logFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        
+        if ($offset !== null) {
+            $contents = array_slice($contents, $offset);
+        }
+        
+        if ($limit !== null) {
+            $contents = array_slice($contents, 0, $limit);
+        }
+        
+        return array_map(function($line) {
+            return json_decode($line, true);
+        }, $contents);
     }
 
-    private function writeLog(string $logEntry): void
+    public function clearLog()
     {
-        if (!file_exists(dirname($this->logFile))) {
-            mkdir(dirname($this->logFile), 0777, true);
-        }
-
-        if (file_put_contents($this->logFile, $logEntry, FILE_APPEND | LOCK_EX) === false) {
-            throw new Exception("Failed to write to log file: {$this->logFile}");
-        }
+        file_put_contents($this->logFile, '');
     }
 
-    private function rotateLogIfNeeded(): void
-    {
-        if (!file_exists($this->logFile) || filesize($this->logFile) < $this->maxFileSize) {
-            return;
-        }
-
-        for ($i = $this->backupCount; $i > 0; $i--) {
-            $srcFile = $i > 1 ? "{$this->logFile}.{$i}" : $this->logFile;
-            $destFile = "{$this->logFile}." . ($i + 1);
-
-            if (file_exists($srcFile)) {
-                rename($srcFile, $destFile);
-            }
-        }
-
-        if (file_exists($this->logFile)) {
-            rename($this->logFile, "{$this->logFile}.1");
-        }
-    }
-
-    public function getLogs(int $limit = 100, int $offset = 0): array
+    private function ensureLogFileExists()
     {
         if (!file_exists($this->logFile)) {
-            return [];
+            $directory = dirname($this->logFile);
+            if (!is_dir($directory)) {
+                mkdir($directory, 0755, true);
+            }
+            touch($this->logFile);
         }
-
-        $logs = file($this->logFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $logs = array_reverse($logs); // Most recent logs first
-        return array_slice($logs, $offset, $limit);
     }
 
-    public function clearLogs(): void
+    private function validateLogLevel($level)
     {
-        if (file_exists($this->logFile)) {
-            unlink($this->logFile);
+        if (!in_array($level, $this->logLevels)) {
+            throw new \InvalidArgumentException("Invalid log level: $level");
         }
+    }
 
-        for ($i = 1; $i <= $this->backupCount; $i++) {
-            $backupFile = "{$this->logFile}.{$i}";
-            if (file_exists($backupFile)) {
-                unlink($backupFile);
-            }
+    private function formatLogEntry($message, $level)
+    {
+        $entry = [
+            'timestamp' => date('Y-m-d H:i:s'),
+            'level' => $level,
+            'message' => $message
+        ];
+        return json_encode($entry) . PHP_EOL;
+    }
+
+    private function writeToFile($logEntry)
+    {
+        if (file_put_contents($this->logFile, $logEntry, FILE_APPEND | LOCK_EX) === false) {
+            throw new \RuntimeException("Failed to write to log file.");
         }
     }
 }

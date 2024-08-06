@@ -45,7 +45,7 @@ abstract class Field
     public function isValid()
     {
         $this->errors = [];
-        if ($this->required && empty($this->value)) {
+        if ($this->required && ($this->value === null || $this->value === '')) {
             $this->setError("This field is required.");
             return false;
         }

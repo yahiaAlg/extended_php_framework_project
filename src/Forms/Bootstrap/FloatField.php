@@ -22,7 +22,7 @@ class FloatField extends Field
         $min = $this->min !== null ? "min='{$this->min}'" : '';
         $max = $this->max !== null ? "max='{$this->max}'" : '';
         $step = $this->step !== null ? "step='{$this->step}'" : '';
-        $value = htmlspecialchars($this->value);
+        $value = htmlspecialchars($this->value?? "");
         return "<label for='{$this->name}' class='form-label'>{$this->label}</label>
                 <input type='number' name='{$this->name}' id='{$this->name}' value='{$value}' {$attrs} {$min} {$max} {$step}>
                 {$this->renderErrors()}";

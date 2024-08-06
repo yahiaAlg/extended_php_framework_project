@@ -22,7 +22,7 @@ class DateTimeField extends Field
     public function render()
     {
         $required = $this->required ? 'required' : '';
-        $value = htmlspecialchars($this->value);
+        $value = htmlspecialchars($this->value?? "");
         return "<label for='{$this->name}'>{$this->label}</label>
                 <input type='datetime-local' name='{$this->name}' id='{$this->name}' value='{$value}' {$required}>";
     }
