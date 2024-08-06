@@ -32,7 +32,7 @@ if (!is_dir(DOCUMENT_UPLOAD_DIR)) {
     mkdir(DOCUMENT_UPLOAD_DIR, 0777, true);
 }
 
-define('ALLOWED_VIDEO_TYPES', ['mp4', 'avi', 'mov']);
+define('ALLOWED_VIDEO_TYPES', ['mp4', 'avi', 'flv']);
 define('VIDEO_UPLOAD_DIR', UPLOAD_DIR . '/videos');
 // make the directory if it doesn't exist
 if (!is_dir(VIDEO_UPLOAD_DIR)) {
