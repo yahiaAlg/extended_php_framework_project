@@ -1,5 +1,5 @@
 <?php
-use App\Helpers\MailingHelper;
+use Helpers\MailingHelper;
 
 $mailer = new MailingHelper();
 $result = $mailer->to('recipient@example.com')

@@ -2,7 +2,7 @@
 
 namespace Core\Router;
 
-use App\Helpers\MiddlewareHelper;
+use Helpers\MiddlewareHelper;
 
 class Router
 {

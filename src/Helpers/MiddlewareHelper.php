@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Helpers;
+namespace Helpers;
 use App\Middleware\CSRFMiddleware;
 
 class MiddlewareHelper

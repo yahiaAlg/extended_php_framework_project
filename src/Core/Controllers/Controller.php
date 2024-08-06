@@ -3,7 +3,7 @@
 namespace Core\Controllers;
 
 use Core\Views\View;
-use App\Helpers\MailingHelper;
+use Helpers\MailingHelper;
 
 abstract class Controller
 {

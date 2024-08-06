@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Middleware;
+namespace Middleware;
 
-use App\Helpers\SessionHelper;
+use Helpers\SessionHelper;
 
 class CSRFMiddleware
 {
